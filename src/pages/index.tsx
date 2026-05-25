@@ -1,78 +1,338 @@
-import Image from "next/image";
-import { Geist, Geist_Mono } from "next/font/google";
+import { useState, useMemo } from "react";
+import { useRouter } from "next/router";
+import {
+  Tabs,
+  Card,
+  Avatar,
+  Input,
+  Button,
+  FloatButton,
+  Empty,
+  Typography,
+  Space,
+  message,
+} from "antd";
+import {
+  SettingOutlined,
+  SearchOutlined,
+  PlusOutlined,
+  UserOutlined,
+  TeamOutlined,
+  ShareAltOutlined,
+  PhoneOutlined,
+  CalendarOutlined,
+} from "@ant-design/icons";
+import type { Person } from "@/types";
+import { usePersons } from "@/hooks/usePersons";
+import { useRelationshipGraph } from "@/hooks/useRelationshipGraph";
+import { PersonDetailDrawer } from "@/components/PersonDetailDrawer";
+import { RelationGraph } from "@/components/RelationGraph";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+const { Title, Text } = Typography;
+const { Search } = Input;
 
 export default function Home() {
-  return (
-    <div
-      className={`${geistSans.className} ${geistMono.className} flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black`}
+  const [activeTab, setActiveTab] = useState<"list" | "graph">("list");
+  const [searchVisible, setSearchVisible] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedPerson, setSelectedPerson] = useState<Person | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const { persons, deletePerson } = usePersons();
+  const { nodes: graphNodes, links: graphLinks } = useRelationshipGraph();
+  const router = useRouter();
+
+  const filteredPersons = useMemo(() => {
+    if (!searchQuery.trim()) return persons;
+    const query = searchQuery.toLowerCase();
+    return persons.filter(
+      (p) =>
+        p.name.toLowerCase().includes(query) ||
+        p.iCall?.toLowerCase().includes(query) ||
+        p.callMe?.toLowerCase().includes(query),
+    );
+  }, [persons, searchQuery]);
+
+  const handleAddPerson = () => {
+    router.push("/add");
+  };
+
+  const handleSettings = () => {
+    router.push("/settings");
+  };
+
+  const toggleSearch = () => {
+    if (searchVisible) {
+      setSearchQuery("");
+    }
+    setSearchVisible(!searchVisible);
+  };
+
+  const handleViewPerson = (person: Person) => {
+    setSelectedPerson(person);
+    setDetailOpen(true);
+  };
+
+  const handleCloseDetail = () => {
+    setDetailOpen(false);
+    setSelectedPerson(null);
+  };
+
+  const handleDeletePerson = async (person: Person) => {
+    await deletePerson(person.id);
+    message.success(`已删除「${person.name}」`);
+  };
+
+  const renderPersonCard = (person: Person) => (
+    <Card
+      key={person.id}
+      className="cursor-pointer"
+      style={{
+        borderRadius: 16,
+        border: "none",
+        backgroundColor: "#FFFBF7",
+        boxShadow: "0 2px 8px rgba(139, 94, 60, 0.06)",
+      }}
+      styles={{
+        body: {
+          padding: "16px",
+        },
+      }}
+      onClick={() => handleViewPerson(person)}
     >
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+      <div className="flex items-center gap-4">
+        <Avatar
+          size={56}
+          src={person.photo}
+          icon={<UserOutlined />}
+          style={{
+            backgroundColor: person.photo ? undefined : "#E8A87C",
+            border: "2px solid #FFF8F0",
+            boxShadow: "0 2px 8px rgba(139, 94, 60, 0.15)",
+            flexShrink: 0,
+          }}
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the index.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <Text style={{ fontSize: 17, fontWeight: 600, color: "#5C4A3D" }}>
+              {person.name}
+            </Text>
+            {person.iCall && (
+              <Text
+                style={{
+                  fontSize: 12,
+                  color: "#C17F59",
+                  backgroundColor: "rgba(232, 168, 124, 0.15)",
+                  padding: "2px 8px",
+                  borderRadius: 10,
+                }}
+              >
+                {person.iCall}
+              </Text>
+            )}
+          </div>
+          <div className="flex items-center gap-3">
+            {person.phone && (
+              <Space size={4}>
+                <PhoneOutlined style={{ fontSize: 12, color: "#8FA88F" }} />
+                <Text
+                  type="secondary"
+                  style={{ fontSize: 13, color: "#8B7355" }}
+                >
+                  {person.phone}
+                </Text>
+              </Space>
+            )}
+            {person.birthday && (
+              <Space size={4}>
+                <CalendarOutlined style={{ fontSize: 12, color: "#D4A574" }} />
+                <Text
+                  type="secondary"
+                  style={{ fontSize: 13, color: "#8B7355" }}
+                >
+                  {person.birthday}
+                </Text>
+              </Space>
+            )}
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs/pages/getting-started?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+        <ShareAltOutlined style={{ fontSize: 18, color: "#D4C4B0" }} />
+      </div>
+    </Card>
+  );
+
+  const tabItems = [
+    {
+      key: "list",
+      label: (
+        <Space size="small">
+          <TeamOutlined />
+          <span>列表视图</span>
+        </Space>
+      ),
+      children: (
+        <div className="h-full overflow-auto p-4">
+          {filteredPersons.length > 0 ? (
+            <div className="flex flex-col gap-4">
+              {filteredPersons.map((person) => (
+                <div key={person.id}>{renderPersonCard(person)}</div>
+              ))}
+            </div>
+          ) : (
+            <div className="h-full flex flex-col items-center justify-center">
+              <Empty
+                image={Empty.PRESENTED_IMAGE_SIMPLE}
+                description={
+                  <Space size="small" align="center">
+                    <Text
+                      type="secondary"
+                      style={{ fontSize: 16, color: "#8B7355" }}
+                    >
+                      还没有添加亲友
+                    </Text>
+                    <Text
+                      type="secondary"
+                      className="text-sm"
+                      style={{ color: "#A89880" }}
+                    >
+                      点击右下角按钮开始添加
+                    </Text>
+                  </Space>
+                }
+              />
+            </div>
+          )}
         </div>
-      </main>
+      ),
+    },
+    {
+      key: "graph",
+      label: (
+        <Space size="small">
+          <ShareAltOutlined />
+          <span>关系图视图</span>
+        </Space>
+      ),
+      children: (
+        <div className="h-full bg-[#FFFBF7]">
+          <RelationGraph
+            nodes={graphNodes}
+            links={graphLinks}
+            selectedId={selectedPerson?.id}
+            onNodeClick={(node) => {
+              const person = persons.find((p) => p.id === node.id);
+              if (person) handleViewPerson(person);
+            }}
+          />
+        </div>
+      ),
+    },
+  ];
+
+  return (
+    <div className="max-w-[480px] mx-auto h-dvh bg-[#FAF6F0] flex flex-col">
+      {/* Header */}
+      <header
+        className="px-5 py-4 bg-[#FFFBF7] flex items-center justify-between shrink-0"
+        style={{
+          boxShadow: "0 1px 3px rgba(139, 94, 60, 0.08)",
+        }}
+      >
+        <Title
+          level={4}
+          style={{ margin: 0, color: "#5C4A3D", fontWeight: 600 }}
+        >
+          亲友圈
+        </Title>
+        <Space size="middle">
+          <Button
+            type="text"
+            icon={<SearchOutlined style={{ fontSize: 20 }} />}
+            onClick={toggleSearch}
+            style={{
+              color: searchVisible ? "#E8A87C" : "#8B8B8B",
+              transition: "all 0.3s ease",
+              width: 40,
+              height: 40,
+              borderRadius: 20,
+              backgroundColor: searchVisible
+                ? "rgba(232, 168, 124, 0.1)"
+                : "transparent",
+            }}
+          />
+          <Button
+            type="text"
+            icon={<SettingOutlined style={{ fontSize: 20 }} />}
+            onClick={handleSettings}
+            style={{
+              color: "#8B7355",
+              width: 40,
+              height: 40,
+              borderRadius: 20,
+            }}
+          />
+        </Space>
+      </header>
+
+      {/* Search Bar - Animated */}
+      <div
+        className="bg-[#FFFBF7] overflow-hidden transition-all duration-300 ease-out shrink-0"
+        style={{
+          maxHeight: searchVisible ? "72px" : "0",
+          opacity: searchVisible ? 1 : 0,
+        }}
+      >
+        <div className="px-5 pb-4">
+          <Search
+            placeholder="搜索姓名或称呼"
+            allowClear
+            size="large"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            style={{
+              borderRadius: 12,
+            }}
+          />
+        </div>
+      </div>
+
+      {/* Tabs & Content */}
+      <div className="flex-1 overflow-hidden bg-[#FFFBF7]">
+        <Tabs
+          activeKey={activeTab}
+          onChange={(key) => setActiveTab(key as "list" | "graph")}
+          items={tabItems}
+          centered
+          tabBarStyle={{ margin: 0 }}
+          className="h-full [&_.ant-tabs-nav]:bg-[#FFFBF7] [&_.ant-tabs-nav]:pt-2 [&_.ant-tabs-nav]:border-b [&_.ant-tabs-nav]:border-[#E8DED0] [&_.ant-tabs-content-holder]:h-[calc(100%-48px)] [&_.ant-tabs-content]:h-full [&_.ant-tabs-tabpane]:h-full [&_.ant-tabs-content-holder]:bg-[#FAF6F0]"
+          style={{ marginBottom: 0 }}
+        />
+      </div>
+
+      {/* Floating Add Button */}
+      <FloatButton
+        type="primary"
+        icon={<PlusOutlined style={{ fontSize: 24 }} />}
+        onClick={handleAddPerson}
+        style={{
+          right: 24,
+          bottom: 24,
+          width: 56,
+          height: 56,
+          backgroundColor: "#E8A87C",
+          boxShadow: "0 4px 16px rgba(232, 168, 124, 0.5)",
+        }}
+      />
+
+      {/* Person Detail Drawer */}
+      <PersonDetailDrawer
+        person={selectedPerson}
+        open={detailOpen}
+        onClose={handleCloseDetail}
+        onDelete={handleDeletePerson}
+        onEdit={(person) => {
+          router.push(`/edit/${person.id}`);
+        }}
+      />
     </div>
   );
 }
