@@ -1,4 +1,14 @@
-import { useRef } from "react";
+// Type for PWA install prompt event
+interface BeforeInstallPromptEvent extends Event {
+  readonly platforms: string[];
+  readonly userChoice: Promise<{
+    outcome: "accepted" | "dismissed";
+    platform: string;
+  }>;
+  prompt(): Promise<void>;
+}
+
+import { useRef, useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/router";
 import {
   Button,
@@ -14,6 +24,7 @@ import {
   DownloadOutlined,
   InfoCircleOutlined,
   MessageOutlined,
+  MobileOutlined,
 } from "@ant-design/icons";
 import { db } from "@/db";
 import type { Person, Relationship } from "@/types";
@@ -31,6 +42,57 @@ export default function Settings() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { modal } = App.useApp();
+  const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [isInstalled, setIsInstalled] = useState(false);
+
+  useEffect(() => {
+    const isStandalone = window.matchMedia("(display-mode: standalone)").matches;
+    setIsInstalled(isStandalone);
+  }, []);
+
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      setInstallPrompt(e as BeforeInstallPromptEvent);
+    };
+
+    const handleAppInstalled = () => {
+      setIsInstalled(true);
+      setInstallPrompt(null);
+      message.success("应用已安装到本地");
+    };
+
+    if (typeof window !== "undefined") {
+      window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+      window.addEventListener("appinstalled", handleAppInstalled);
+    }
+
+    return () => {
+      if (typeof window !== "undefined") {
+        window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+        window.removeEventListener("appinstalled", handleAppInstalled);
+      }
+    };
+  }, []);
+
+  const handleInstall = useCallback(async () => {
+    if (!installPrompt) {
+      if (isInstalled) {
+        message.info("应用已安装到本地");
+      } else {
+        message.info("您的浏览器暂不支持安装，可以尝试使用 Chrome 或 Safari 浏览器");
+      }
+      return;
+    }
+
+    installPrompt.prompt();
+    const { outcome } = await installPrompt.userChoice;
+
+    if (outcome === "accepted") {
+      message.success("应用安装成功！");
+      setInstallPrompt(null);
+    }
+  }, [installPrompt, isInstalled]);
 
   const handleBack = () => {
     router.back();
@@ -241,6 +303,12 @@ export default function Settings() {
             "版本 1.0.0",
             undefined,
             false,
+          )}
+          {renderSettingItem(
+            <MobileOutlined />,
+            isInstalled ? "已安装到本地" : "安装到本地",
+            handleInstall,
+            !isInstalled,
           )}
           {renderSettingItem(
             <MessageOutlined />,
