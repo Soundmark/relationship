@@ -111,6 +111,17 @@ export function RelationGraph({
     );
     const isFirstLayout = !hasAnySavedPositions;
 
+    // 首次布局时将"我"固定在中心
+    if (isFirstLayout) {
+      const meNode = simulationNodes.find((n) => n.isMe);
+      if (meNode) {
+        meNode.x = width / 2;
+        meNode.y = height / 2;
+        meNode.fx = width / 2;
+        meNode.fy = height / 2;
+      }
+    }
+
     // 准备 defs
     const svg = d3.select(svgRef.current);
     const defs = svg.select("defs").empty()
@@ -214,8 +225,8 @@ export function RelationGraph({
     nodeGroupEnter
       .append("circle")
       .attr("class", "node-circle")
-      .attr("r", 28)
-      .attr("fill", "#FFFFFF")
+      .attr("r", (d) => (d.isMe ? 32 : 28)) // "我"的节点稍大
+      .attr("fill", (d) => (d.isMe ? "#E8A87C" : "#FFFFFF")) // "我"的节点使用主题色
       .style("filter", "drop-shadow(0 2px 8px rgba(139, 94, 60, 0.15))");
 
     // 头像或首字母容器
@@ -246,8 +257,11 @@ export function RelationGraph({
     // 更新节点样式（选中状态）
     nodeGroupMerge
       .select<SVGCircleElement>("circle.node-circle")
-      .attr("stroke", (d) => (d.id === selectedId ? "#E8A87C" : "#E8DED0"))
-      .attr("stroke-width", (d) => (d.id === selectedId ? 3 : 2));
+      .attr("stroke", (d) => {
+        if (d.isMe) return "#C17F59"; // "我"的节点使用深一点的边框
+        return d.id === selectedId ? "#E8A87C" : "#E8DED0";
+      })
+      .attr("stroke-width", (d) => (d.id === selectedId || d.isMe ? 3 : 2));
 
     // 更新头像/首字母
     nodeGroupMerge.each(function (d) {
@@ -255,8 +269,8 @@ export function RelationGraph({
       const avatarGroup = node.select("g.node-avatar");
       avatarGroup.selectAll("*").remove();
 
-      if (d.photo) {
-        // 创建裁剪路径
+      if (d.photo && !d.isMe) {
+        // 创建裁剪路径（非"我"的节点）
         const clipId = `clip-${d.id}`;
         if (defs.select(`#${clipId}`).empty()) {
           defs
@@ -275,14 +289,15 @@ export function RelationGraph({
           .attr("height", 48)
           .attr("clip-path", `url(#${clipId})`);
       } else {
+        // "我"的节点显示"我"字，其他节点显示首字母
         avatarGroup
           .append("text")
           .attr("text-anchor", "middle")
           .attr("dominant-baseline", "middle")
-          .style("font-size", "18px")
+          .style("font-size", d.isMe ? "20px" : "18px")
           .style("font-weight", "600")
-          .style("fill", "#E8A87C")
-          .text(d.name.charAt(0));
+          .style("fill", d.isMe ? "#FFFFFF" : "#E8A87C")
+          .text(d.isMe ? "我" : d.name.charAt(0));
       }
     });
 
@@ -299,39 +314,48 @@ export function RelationGraph({
     // ========== 拖拽行为 ==========
     const drag = d3
       .drag<SVGGElement, GraphNode>()
-      .on("start", (_event, d) => {
+      .on("start", function (event, d) {
         // 解锁位置
         d.fx = null;
         d.fy = null;
+        // 记录拖拽开始时的偏移量
+        const transform = d3.select(this).attr("transform");
+        const match = transform?.match(/translate\(([^,]+),([^)]+)\)/);
+        if (match) {
+          const currentX = parseFloat(match[1]);
+          const currentY = parseFloat(match[2]);
+          d.dragOffsetX = currentX - event.x;
+          d.dragOffsetY = currentY - event.y;
+        } else {
+          d.dragOffsetX = 0;
+          d.dragOffsetY = 0;
+        }
       })
-      .on("drag", (event, d) => {
-        d.x = event.x;
-        d.y = event.y;
-        d.fx = event.x;
-        d.fy = event.y;
+      .on("drag", function (event, d) {
+        // 计算新位置（考虑偏移）
+        const newX = event.x + (d.dragOffsetX || 0);
+        const newY = event.y + (d.dragOffsetY || 0);
 
-        // 更新节点位置
-        d3.select(event.sourceEvent.target.closest("g.node-group")).attr(
-          "transform",
-          `translate(${d.x},${d.y})`
-        );
+        d.x = newX;
+        d.y = newY;
+        d.fx = newX;
+        d.fy = newY;
 
-        // 更新相关连线
-        const sourceLinks = simulationLinks.filter(
-          (l) => (l.source as GraphNode).id === d.id
-        );
-        const targetLinks = simulationLinks.filter(
-          (l) => (l.target as GraphNode).id === d.id
-        );
+        // 更新当前节点位置（使用 this 确保准确性）
+        d3.select(this).attr("transform", `translate(${newX},${newY})`);
 
+        // 更新与该节点相关的所有连线
+        const nodeId = d.id;
         g.selectAll<SVGGElement, GraphLink>("g.link-group").each(function (l) {
-          const isSource = (l.source as GraphNode).id === d.id;
-          const isTarget = (l.target as GraphNode).id === d.id;
+          const sourceId = (l.source as GraphNode).id;
+          const targetId = (l.target as GraphNode).id;
 
-          if (isSource || isTarget) {
+          if (sourceId === nodeId || targetId === nodeId) {
             const group = d3.select(this);
-            const sourceNode = isSource ? d : (l.source as GraphNode);
-            const targetNode = isTarget ? d : (l.target as GraphNode);
+
+            // 获取源和目标节点的当前位置
+            const sourceNode = simulationNodes.find((n) => n.id === sourceId)!;
+            const targetNode = simulationNodes.find((n) => n.id === targetId)!;
 
             // 更新连线
             group
@@ -359,7 +383,10 @@ export function RelationGraph({
           }
         });
       })
-      .on("end", (_event, d) => {
+      .on("end", function (_event, d) {
+        // 清理偏移量
+        delete d.dragOffsetX;
+        delete d.dragOffsetY;
         // 保存位置
         if (d.x !== undefined && d.y !== undefined) {
           nodePositionsRef.current.set(d.id, { x: d.x, y: d.y });
