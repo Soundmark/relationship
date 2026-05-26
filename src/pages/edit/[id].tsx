@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/router";
 import {
   Input,
@@ -19,6 +19,7 @@ import {
 import dayjs from "dayjs";
 import { db } from "@/db";
 import { usePersons } from "@/hooks/usePersons";
+import ImageCropper from "@/components/ImageCropper";
 import type { Person, Relationship } from "@/types";
 
 const { Title, Text } = Typography;
@@ -38,6 +39,10 @@ export default function EditPerson() {
   const [photo, setPhoto] = useState("");
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  // Image cropper state
+  const [cropperOpen, setCropperOpen] = useState(false);
+  const [cropperImage, setCropperImage] = useState("");
 
   // Relations management
   const [relations, setRelations] = useState<Relationship[]>([]);
@@ -166,9 +171,26 @@ export default function EditPerson() {
 
     const reader = new FileReader();
     reader.onload = (ev) => {
-      setPhoto(ev.target?.result as string);
+      setCropperImage(ev.target?.result as string);
+      setCropperOpen(true);
     };
     reader.readAsDataURL(file);
+
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const handleCropConfirm = (croppedImage: string) => {
+    setPhoto(croppedImage);
+    setCropperOpen(false);
+    setCropperImage("");
+  };
+
+  const handleCropCancel = () => {
+    setCropperOpen(false);
+    setCropperImage("");
   };
 
   const handleSave = async () => {
@@ -566,6 +588,14 @@ export default function EditPerson() {
           保存
         </Button>
       </div>
+
+      {/* Image Cropper Modal */}
+      <ImageCropper
+        imageSrc={cropperImage}
+        open={cropperOpen}
+        onCancel={handleCropCancel}
+        onConfirm={handleCropConfirm}
+      />
     </div>
   );
 }

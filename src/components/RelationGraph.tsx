@@ -22,6 +22,8 @@ export function RelationGraph({
   const zoomRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown> | null>(null);
   const nodePositionsRef = useRef<Map<string, { x: number; y: number }>>(new Map());
   const isInitializedRef = useRef(false);
+  const nodesSignatureRef = useRef("");
+  const linksSignatureRef = useRef("");
 
   // 初始化图表（只执行一次）
   const initGraph = useCallback(() => {
@@ -61,7 +63,7 @@ export function RelationGraph({
   }, []);
 
   // 更新图表（使用 data join）
-  const updateGraph = useCallback(() => {
+  const updateGraph = useCallback((currentNodes: GraphNode[], currentLinks: GraphLink[]) => {
     if (!svgRef.current || !containerRef.current || !gRef.current) return;
 
     const container = containerRef.current;
@@ -70,7 +72,7 @@ export function RelationGraph({
     const g = gRef.current;
 
     // 如果没有节点，显示空状态
-    if (nodes.length === 0) {
+    if (currentNodes.length === 0) {
       g.selectAll("*").remove();
       const svg = d3.select(svgRef.current);
       svg.selectAll("text.empty-hint").remove();
@@ -91,7 +93,7 @@ export function RelationGraph({
     d3.select(svgRef.current).selectAll("text.empty-hint").remove();
 
     // 深拷贝节点数据，恢复之前的位置
-    const simulationNodes: GraphNode[] = nodes.map((n) => {
+    const simulationNodes: GraphNode[] = currentNodes.map((n) => {
       const savedPos = nodePositionsRef.current.get(n.id);
       return {
         ...n,
@@ -102,8 +104,12 @@ export function RelationGraph({
       };
     });
 
-    // 深拷贝连线数据
-    const simulationLinks: GraphLink[] = links.map((l) => ({ ...l }));
+    // 深拷贝连线数据，并将 source/target 解析为节点对象
+    const simulationLinks: GraphLink[] = currentLinks.map((l) => ({
+      ...l,
+      source: simulationNodes.find((n) => n.id === l.source) || l.source,
+      target: simulationNodes.find((n) => n.id === l.target) || l.target,
+    }));
 
     // 检查是否是首次布局（没有保存任何位置）
     const hasAnySavedPositions = simulationNodes.some((n) =>
@@ -111,7 +117,7 @@ export function RelationGraph({
     );
     const isFirstLayout = !hasAnySavedPositions;
 
-    // 首次布局时将"我"固定在中心
+    // 首次布局时给节点初始位置
     if (isFirstLayout) {
       const meNode = simulationNodes.find((n) => n.isMe);
       if (meNode) {
@@ -120,6 +126,15 @@ export function RelationGraph({
         meNode.fx = width / 2;
         meNode.fy = height / 2;
       }
+      // 给其他节点一个围绕中心的初始位置（避免堆叠在左上角）
+      simulationNodes.forEach((node, i) => {
+        if (!node.isMe && node.x === undefined) {
+          const angle = (i / simulationNodes.length) * 2 * Math.PI;
+          const radius = 150;
+          node.x = width / 2 + radius * Math.cos(angle);
+          node.y = height / 2 + radius * Math.sin(angle);
+        }
+      });
     }
 
     // 准备 defs
@@ -187,17 +202,34 @@ export function RelationGraph({
       .style("pointer-events", "none")
       .text((d) => d.label);
 
-    // 计算标签背景尺寸
-    linkGroupMerge.each(function () {
+    // 计算标签背景尺寸并设置连线和标签的初始位置
+    linkGroupMerge.each(function (d) {
       const group = d3.select(this);
+      const source = d.source as GraphNode;
+      const target = d.target as GraphNode;
+
+      // 设置连线位置
+      group
+        .select("line.link-line")
+        .attr("x1", source.x!)
+        .attr("y1", source.y!)
+        .attr("x2", target.x!)
+        .attr("y2", target.y!);
+
+      // 设置标签位置
+      const midX = (source.x! + target.x!) / 2;
+      const midY = (source.y! + target.y!) / 2;
+      group.select("text.link-label").attr("x", midX).attr("y", midY);
+
+      // 设置标签背景
       const text = group.select("text.link-label").node() as SVGTextElement;
       const bbox = text?.getBBox();
       if (bbox) {
         const padding = 6;
         group
           .select("rect.link-label-bg")
-          .attr("x", -bbox.width / 2 - padding)
-          .attr("y", -bbox.height / 2 - padding + 1)
+          .attr("x", midX - bbox.width / 2 - padding)
+          .attr("y", midY - bbox.height / 2 - padding + 1)
           .attr("width", bbox.width + padding * 2)
           .attr("height", bbox.height + padding * 2);
       }
@@ -419,6 +451,9 @@ export function RelationGraph({
 
     // 如果是首次布局，等待仿真稳定
     if (isFirstLayout) {
+      // 立即执行一次 tick 更新初始位置
+      nodeGroupMerge.attr("transform", (d) => `translate(${d.x},${d.y})`);
+
       simulation.on("end", () => {
         // 保存最终位置并锁定
         simulationNodes.forEach((node) => {
@@ -432,9 +467,36 @@ export function RelationGraph({
     } else {
       // 已有位置，直接停止仿真（冻结布局）
       simulation.stop();
+      // 手动触发一次 tick 更新，确保节点位置正确应用
+      // 更新节点位置
+      nodeGroupMerge.attr("transform", (d) => `translate(${d.x},${d.y})`);
+      // 更新连线
+      linkGroupMerge.each(function (d) {
+        const group = d3.select(this);
+        const source = d.source as GraphNode;
+        const target = d.target as GraphNode;
+        group
+          .select("line.link-line")
+          .attr("x1", source.x!)
+          .attr("y1", source.y!)
+          .attr("x2", target.x!)
+          .attr("y2", target.y!);
+        const midX = (source.x! + target.x!) / 2;
+        const midY = (source.y! + target.y!) / 2;
+        group.select("text.link-label").attr("x", midX).attr("y", midY);
+        const text = group.select("text.link-label").node() as SVGTextElement;
+        const bbox = text?.getBBox();
+        if (bbox) {
+          const padding = 6;
+          group
+            .select("rect.link-label-bg")
+            .attr("x", midX - bbox.width / 2 - padding)
+            .attr("y", midY - bbox.height / 2 - padding + 1);
+        }
+      });
     }
 
-    // 仿真 tick 更新
+    // 仿真 tick 更新（仅在仿真运行时）
     simulation.on("tick", () => {
       // 更新节点位置
       nodeGroupMerge.attr("transform", (d) => `translate(${d.x},${d.y})`);
@@ -468,19 +530,26 @@ export function RelationGraph({
         }
       });
     });
-  }, [nodes, links, selectedId, onNodeClick]);
+  }, [selectedId, onNodeClick]);
 
   // 首次挂载初始化
   useEffect(() => {
     initGraph();
   }, [initGraph]);
 
-  // 数据变化时更新图表
+  // 监听 nodes 和 links 变化
   useEffect(() => {
-    if (isInitializedRef.current) {
-      updateGraph();
+    const nodesSig = JSON.stringify(nodes.map(n => n.id));
+    const linksSig = JSON.stringify(links.map(l => l.id));
+
+    if (nodesSig !== nodesSignatureRef.current || linksSig !== linksSignatureRef.current) {
+      nodesSignatureRef.current = nodesSig;
+      linksSignatureRef.current = linksSig;
+      if (isInitializedRef.current) {
+        updateGraph(nodes, links);
+      }
     }
-  }, [updateGraph]);
+  }, [nodes, links, updateGraph]);
 
   // 监听尺寸变化
   useEffect(() => {

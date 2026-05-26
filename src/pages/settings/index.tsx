@@ -80,7 +80,7 @@ export default function Settings() {
       if (isInstalled) {
         message.info("应用已安装到本地");
       } else {
-        message.info("您的浏览器暂不支持安装，可以尝试使用 Chrome 或 Safari 浏览器");
+        message.info("请确保使用的是现代浏览器(chrome/edge)，出现这个提示可以刷新一两次页面后再试");
       }
       return;
     }

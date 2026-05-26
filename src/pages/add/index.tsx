@@ -19,6 +19,7 @@ import {
 import dayjs from "dayjs";
 import { db } from "@/db";
 import { usePersons } from "@/hooks/usePersons";
+import ImageCropper from "@/components/ImageCropper";
 import type { Person } from "@/types";
 
 const { Title, Text } = Typography;
@@ -44,6 +45,10 @@ export default function AddPerson() {
   const [saving, setSaving] = useState(false);
   const [relations, setRelations] = useState<RelationEntry[]>([]);
 
+  // Image cropper state
+  const [cropperOpen, setCropperOpen] = useState(false);
+  const [cropperImage, setCropperImage] = useState("");
+
   // 可选的关联人员列表（排除当前正在添加的人）
   const availablePersons = useMemo(() => {
     return persons.filter((p) => p.name !== name.trim());
@@ -59,9 +64,26 @@ export default function AddPerson() {
 
     const reader = new FileReader();
     reader.onload = (ev) => {
-      setPhoto(ev.target?.result as string);
+      setCropperImage(ev.target?.result as string);
+      setCropperOpen(true);
     };
     reader.readAsDataURL(file);
+
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const handleCropConfirm = (croppedImage: string) => {
+    setPhoto(croppedImage);
+    setCropperOpen(false);
+    setCropperImage("");
+  };
+
+  const handleCropCancel = () => {
+    setCropperOpen(false);
+    setCropperImage("");
   };
 
   const inputStyle = {
@@ -463,6 +485,14 @@ export default function AddPerson() {
           保存
         </Button>
       </div>
+
+      {/* Image Cropper Modal */}
+      <ImageCropper
+        imageSrc={cropperImage}
+        open={cropperOpen}
+        onCancel={handleCropCancel}
+        onConfirm={handleCropConfirm}
+      />
     </div>
   );
 }
