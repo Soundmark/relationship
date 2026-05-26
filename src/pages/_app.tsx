@@ -1,4 +1,5 @@
 import "@/styles/globals.css";
+import "cropperjs/dist/cropper.css";
 import { ConfigProvider, theme, App as AntApp } from "antd";
 import type { AppProps } from "next/app";
 

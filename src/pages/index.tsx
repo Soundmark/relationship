@@ -302,7 +302,7 @@ export default function Home() {
           onChange={(key) => setActiveTab(key as "list" | "graph")}
           items={tabItems}
           centered
-          destroyInactiveTabPane={false}
+          destroyOnHidden={false}
           tabBarStyle={{ margin: 0 }}
           className="h-full [&_.ant-tabs-nav]:bg-[#FFFBF7] [&_.ant-tabs-nav]:pt-2 [&_.ant-tabs-nav]:border-b [&_.ant-tabs-nav]:border-[#E8DED0] [&_.ant-tabs-content-holder]:h-[calc(100%-48px)] [&_.ant-tabs-content]:h-full [&_.ant-tabs-tabpane]:h-full [&_.ant-tabs-content-holder]:bg-[#FAF6F0]"
           style={{ marginBottom: 0 }}
