@@ -7,6 +7,10 @@ class RelationshipDB extends Dexie {
 
   constructor() {
     super("RelationshipDB");
+    this.version(2).stores({
+      persons: "id, name, createdAt",
+      relationships: "id, fromPersonId, toPersonId, type",
+    });
     this.version(1).stores({
       persons: "id, name, createdAt",
       relationships: "id, fromPersonId, toPersonId",

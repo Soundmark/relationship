@@ -84,6 +84,13 @@ export function PersonDetailDrawer({
 
   if (!person) return null;
 
+  const relationTypeLabel: Record<string, string> = {
+    "parent-child": "子女",
+    spouse: "夫妻",
+    sibling: "兄弟姐妹",
+    other: "其他",
+  };
+
   const getRelationDisplay = (relation: Relationship) => {
     const isSource = relation.fromPersonId === person.id;
     const otherId = isSource ? relation.toPersonId : relation.fromPersonId;
@@ -92,7 +99,8 @@ export function PersonDetailDrawer({
 
     return {
       name: otherPerson.name,
-      label: relation.relationLabel,
+      type: relation.type,
+      typeLabel: relationTypeLabel[relation.type] || "其他",
       direction: isSource ? "to" : "from",
     };
   };
@@ -294,7 +302,7 @@ export function PersonDetailDrawer({
                           marginLeft: 8,
                         }}
                       >
-                        {display.label}
+                        {display.typeLabel}
                       </Text>
                     </div>
                   );

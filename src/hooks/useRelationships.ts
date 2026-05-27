@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import type { Relationship, Person } from "@/types";
+import type { Relationship, Person, RelationshipType } from "@/types";
 import { db } from "@/db";
 
 export function useRelationships() {
@@ -82,7 +82,7 @@ export function useRelationships() {
         id: r.id,
         source: r.fromPersonId,
         target: r.toPersonId,
-        label: r.relationLabel,
+        label: r.type,
       }));
 
       return { nodes, edges };
@@ -95,11 +95,11 @@ export function useRelationships() {
     async (
       fromPersonId: string,
       toPersonId: string,
-      relationLabel: string
+      type: RelationshipType
     ): Promise<Relationship> => {
       // 检查是否已存在相同关系
       const existing = await db.relationships
-        .where({ fromPersonId, toPersonId, relationLabel })
+        .where({ fromPersonId, toPersonId, type })
         .first();
 
       if (existing) {
@@ -110,7 +110,7 @@ export function useRelationships() {
         id: crypto.randomUUID(),
         fromPersonId,
         toPersonId,
-        relationLabel,
+        type,
       };
 
       await db.relationships.add(relationship);

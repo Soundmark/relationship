@@ -216,6 +216,8 @@ export function RelationGraph({
         .attr("x2", target.x!)
         .attr("y2", target.y!);
 
+      if (!d.label) return; // 空标签不显示背景
+
       // 设置标签位置
       const midX = (source.x! + target.x!) / 2;
       const midY = (source.y! + target.y!) / 2;
@@ -274,7 +276,7 @@ export function RelationGraph({
       .style("font-weight", "500")
       .style("fill", "#4A4A4A");
 
-    // 称呼
+    // 称呼（我对TA的称呼）
     nodeGroupEnter
       .append("text")
       .attr("class", "node-icall")
@@ -338,7 +340,7 @@ export function RelationGraph({
       .select<SVGTextElement>("text.node-name")
       .text((d) => d.name);
 
-    // 更新称呼
+    // 更新称呼（我对TA的称呼）
     nodeGroupMerge
       .select<SVGTextElement>("text.node-icall")
       .text((d) => d.iCall || "");
@@ -396,6 +398,8 @@ export function RelationGraph({
               .attr("y1", sourceNode.y!)
               .attr("x2", targetNode.x!)
               .attr("y2", targetNode.y!);
+
+            if (!l.label) return; // 空标签不显示背景
 
             // 更新标签位置
             const midX = (sourceNode.x! + targetNode.x!) / 2;
@@ -472,6 +476,7 @@ export function RelationGraph({
       nodeGroupMerge.attr("transform", (d) => `translate(${d.x},${d.y})`);
       // 更新连线
       linkGroupMerge.each(function (d) {
+        if (!d.label) return;
         const group = d3.select(this);
         const source = d.source as GraphNode;
         const target = d.target as GraphNode;
@@ -503,6 +508,7 @@ export function RelationGraph({
 
       // 更新连线
       linkGroupMerge.each(function (d) {
+        if (!d.label) return;
         const group = d3.select(this);
         const source = d.source as GraphNode;
         const target = d.target as GraphNode;

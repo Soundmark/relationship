@@ -22,7 +22,7 @@ import { db } from "@/db";
 import { usePersons } from "@/hooks/usePersons";
 import ImageCropper from "@/components/ImageCropper";
 import RelationshipCalculator from "@/components/RelationshipCalculator";
-import type { Person } from "@/types";
+import type { Person, RelationshipType } from "@/types";
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -30,7 +30,7 @@ const { Option } = Select;
 
 interface RelationEntry {
   toPersonId: string;
-  label: string;
+  type: RelationshipType;
 }
 
 export default function AddPerson() {
@@ -47,9 +47,6 @@ export default function AddPerson() {
   const [saving, setSaving] = useState(false);
   const [relations, setRelations] = useState<RelationEntry[]>([]);
   const [calculatorOpen, setCalculatorOpen] = useState(false);
-  const [calculatorRelationIndex, setCalculatorRelationIndex] = useState<
-    number | null
-  >(null);
 
   // Image cropper state
   const [cropperOpen, setCropperOpen] = useState(false);
@@ -99,7 +96,7 @@ export default function AddPerson() {
   };
 
   const handleAddRelation = () => {
-    setRelations((prev) => [...prev, { toPersonId: "", label: "" }]);
+    setRelations((prev) => [...prev, { toPersonId: "", type: "other" }]);
   };
 
   const handleRemoveRelation = (index: number) => {
@@ -123,14 +120,12 @@ export default function AddPerson() {
     }
 
     // 验证关系数据
-    const validRelations = relations.filter(
-      (r) => r.toPersonId && r.label.trim()
-    );
+    const validRelations = relations.filter((r) => r.toPersonId);
     const invalidRelations = relations.filter(
-      (r) => (r.toPersonId && !r.label.trim()) || (!r.toPersonId && r.label.trim())
+      (r) => !r.toPersonId
     );
     if (invalidRelations.length > 0) {
-      message.warning("请完善关系信息：选择人员并填写关系称呼");
+      message.warning("请选择关联人员");
       return;
     }
 
@@ -161,7 +156,7 @@ export default function AddPerson() {
             id: crypto.randomUUID(),
             fromPersonId: personId,
             toPersonId: relation.toPersonId,
-            relationLabel: relation.label.trim(),
+            type: relation.type,
           });
         }
       });
@@ -286,10 +281,7 @@ export default function AddPerson() {
               />
               <Button
                 icon={<CalculatorOutlined />}
-                onClick={() => {
-                  setCalculatorRelationIndex(null);
-                  setCalculatorOpen(true);
-                }}
+                onClick={() => setCalculatorOpen(true)}
                 style={{
                   width: 44,
                   height: 44,
@@ -343,22 +335,19 @@ export default function AddPerson() {
                         label: p.name,
                       }))}
                     />
-                    <Input
-                      placeholder="关系，如：父子"
-                      style={{ flex: 1 }}
-                      value={relation.label}
-                      onChange={(e) =>
-                        handleRelationChange(index, "label", e.target.value)
+                    <Select
+                      placeholder="关系类型"
+                      style={{ width: 120 }}
+                      value={relation.type}
+                      onChange={(value) =>
+                        handleRelationChange(index, "type", value)
                       }
-                    />
-                    <Button
-                      type="text"
-                      icon={<CalculatorOutlined />}
-                      onClick={() => {
-                        setCalculatorRelationIndex(index);
-                        setCalculatorOpen(true);
-                      }}
-                      style={{ color: "#C17F59" }}
+                      options={[
+                        { value: "parent-child", label: "子女" },
+                        { value: "spouse", label: "夫妻" },
+                        { value: "sibling", label: "兄弟姐妹" },
+                        { value: "other", label: "其他" },
+                      ]}
                     />
                     <Button
                       type="text"
@@ -453,6 +442,7 @@ export default function AddPerson() {
                           }}
                           variant="filled"
                           placeholder="选择日期"
+                          inputReadOnly
                           onChange={(_, dateStr) =>
                             setBirthday(dateStr as string)
                           }
@@ -530,13 +520,7 @@ export default function AddPerson() {
       <RelationshipCalculator
         open={calculatorOpen}
         onClose={() => setCalculatorOpen(false)}
-        onSelect={(result) => {
-          if (calculatorRelationIndex !== null) {
-            handleRelationChange(calculatorRelationIndex, "label", result);
-          } else {
-            setICall(result);
-          }
-        }}
+        onSelect={(result) => setICall(result)}
       />
     </div>
   );

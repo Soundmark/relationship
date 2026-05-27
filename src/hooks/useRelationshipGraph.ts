@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { db } from "@/db";
+import type { RelationshipType } from "@/types";
 
 export interface GraphNode {
   id: string;
@@ -56,24 +57,51 @@ export function useRelationshipGraph() {
       graphNodes.unshift(meNode);
 
       // 构建边
-      const graphLinks: GraphLink[] = relationships.map((rel) => ({
-        id: rel.id,
-        source: rel.fromPersonId,
-        target: rel.toPersonId,
-        label: rel.relationLabel,
-      }));
+      const graphLinks: GraphLink[] = [];
 
-      // 添加"我"与其他人的关系边
-      // 根据每个人员的 iCall（我称呼对方）建立关系
+      // 关系类型中文映射
+      const typeLabelMap: Record<string, string> = {
+        "parent-child": "子女",
+        spouse: "夫妻",
+        sibling: "兄弟姐妹",
+        other: "其他",
+      };
+
+      // 第1步：添加"我"→所有人的边（不显示标签）
       persons.forEach((person) => {
         if (person.iCall) {
-          // 我 -> 对方，关系标签是我对对方的称呼
           graphLinks.push({
             id: `me-to-${person.id}`,
             source: "me",
             target: person.id,
-            label: person.iCall,
+            label: "",
           });
+        }
+      });
+
+      // 第2步：添加人员之间的关系边，处理层级
+      relationships.forEach((rel) => {
+        // 检查两端节点都在图中
+        const sourceInGraph = graphNodes.some((n) => n.id === rel.fromPersonId);
+        const targetInGraph = graphNodes.some((n) => n.id === rel.toPersonId);
+        if (!sourceInGraph || !targetInGraph) return;
+
+        // 添加关系边，显示类型中文名
+        graphLinks.push({
+          id: `rel-${rel.id}`,
+          source: rel.fromPersonId,
+          target: rel.toPersonId,
+          label: typeLabelMap[rel.type] || "其他",
+        });
+
+        // 如果是亲子关系：子级连接我，亲长通过子级连接 → 删除我→亲长的直连边
+        if (rel.type === "parent-child") {
+          const meToParentIndex = graphLinks.findIndex(
+            (l) => l.source === "me" && l.target === rel.fromPersonId
+          );
+          if (meToParentIndex !== -1) {
+            graphLinks.splice(meToParentIndex, 1);
+          }
         }
       });
 

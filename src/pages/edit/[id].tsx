@@ -22,7 +22,7 @@ import { db } from "@/db";
 import { usePersons } from "@/hooks/usePersons";
 import ImageCropper from "@/components/ImageCropper";
 import RelationshipCalculator from "@/components/RelationshipCalculator";
-import type { Person, Relationship } from "@/types";
+import type { Person, Relationship, RelationshipType } from "@/types";
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -48,14 +48,12 @@ export default function EditPerson() {
 
   // Relationship calculator state
   const [calculatorOpen, setCalculatorOpen] = useState(false);
-  const [calculatorForNewRelation, setCalculatorForNewRelation] =
-    useState(false);
 
   // Relations management
   const [relations, setRelations] = useState<Relationship[]>([]);
   const [relatedPersons, setRelatedPersons] = useState<Map<string, Person>>(new Map());
   const [newRelationToId, setNewRelationToId] = useState<string>("");
-  const [newRelationLabel, setNewRelationLabel] = useState("");
+  const [newRelationType, setNewRelationType] = useState<RelationshipType>("other");
 
   // Load person data and relations
   useEffect(() => {
@@ -120,8 +118,8 @@ export default function EditPerson() {
 
   const handleAddRelation = async () => {
     if (!id || typeof id !== "string") return;
-    if (!newRelationToId || !newRelationLabel.trim()) {
-      message.warning("请选择人员并输入关系");
+    if (!newRelationToId) {
+      message.warning("请选择人员");
       return;
     }
 
@@ -130,12 +128,12 @@ export default function EditPerson() {
         id: crypto.randomUUID(),
         fromPersonId: id,
         toPersonId: newRelationToId,
-        relationLabel: newRelationLabel.trim(),
+        type: newRelationType,
       });
 
       message.success("关系添加成功");
       setNewRelationToId("");
-      setNewRelationLabel("");
+      setNewRelationType("other");
       await loadRelations(id);
     } catch {
       message.error("添加关系失败");
@@ -154,6 +152,13 @@ export default function EditPerson() {
     }
   };
 
+  const relationTypeLabel: Record<string, string> = {
+    "parent-child": "子女",
+    spouse: "夫妻",
+    sibling: "兄弟姐妹",
+    other: "其他",
+  };
+
   const getRelationDisplay = (relation: Relationship) => {
     if (!id || typeof id !== "string") return null;
     const isSource = relation.fromPersonId === id;
@@ -163,7 +168,7 @@ export default function EditPerson() {
 
     return {
       name: otherPerson.name,
-      label: relation.relationLabel,
+      typeLabel: relationTypeLabel[relation.type] || "其他",
       direction: isSource ? "to" : "from",
     };
   };
@@ -355,10 +360,7 @@ export default function EditPerson() {
               />
               <Button
                 icon={<CalculatorOutlined />}
-                onClick={() => {
-                  setCalculatorForNewRelation(false);
-                  setCalculatorOpen(true);
-                }}
+                onClick={() => setCalculatorOpen(true)}
                 style={{
                   width: 44,
                   height: 44,
@@ -420,7 +422,7 @@ export default function EditPerson() {
                           borderRadius: 10,
                         }}
                       >
-                        {display.label}
+                        {display.typeLabel}
                       </Text>
                     </div>
                     <Button
@@ -454,28 +456,24 @@ export default function EditPerson() {
                         label: p.name,
                       }))}
                   />
-                  <Input
-                    placeholder="关系称呼，如：父子"
-                    style={{ flex: 1 }}
-                    value={newRelationLabel}
-                    onChange={(e) => setNewRelationLabel(e.target.value)}
-                    onPressEnter={handleAddRelation}
-                  />
-                  <Button
-                    type="text"
-                    icon={<CalculatorOutlined />}
-                    onClick={() => {
-                      setCalculatorForNewRelation(true);
-                      setCalculatorOpen(true);
-                    }}
-                    style={{ color: "#C17F59" }}
+                  <Select
+                    placeholder="关系类型"
+                    style={{ width: 130 }}
+                    value={newRelationType}
+                    onChange={setNewRelationType}
+                    options={[
+                      { value: "parent-child", label: "子女" },
+                      { value: "spouse", label: "夫妻" },
+                      { value: "sibling", label: "兄弟姐妹" },
+                      { value: "other", label: "其他" },
+                    ]}
                   />
                 </div>
                 <Button
                   type="dashed"
                   block
                   icon={<PlusOutlined />}
-                  disabled={!newRelationToId || !newRelationLabel.trim()}
+                  disabled={!newRelationToId}
                   onClick={handleAddRelation}
                   style={{
                     borderRadius: 12,
@@ -556,6 +554,7 @@ export default function EditPerson() {
                           }}
                           variant="filled"
                           placeholder="选择日期"
+                          inputReadOnly
                           value={birthday ? dayjs(birthday) : undefined}
                           onChange={(_, dateStr) =>
                             setBirthday(dateStr as string)
@@ -634,13 +633,7 @@ export default function EditPerson() {
       <RelationshipCalculator
         open={calculatorOpen}
         onClose={() => setCalculatorOpen(false)}
-        onSelect={(result) => {
-          if (calculatorForNewRelation) {
-            setNewRelationLabel(result);
-          } else {
-            setICall(result);
-          }
-        }}
+        onSelect={(result) => setICall(result)}
       />
     </div>
   );

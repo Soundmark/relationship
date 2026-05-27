@@ -11,9 +11,11 @@ export interface Person {
   updatedAt: number;
 }
 
+export type RelationshipType = "parent-child" | "spouse" | "sibling" | "other";
+
 export interface Relationship {
   id: string;
   fromPersonId: string;
   toPersonId: string;
-  relationLabel: string;
+  type: RelationshipType;
 }
