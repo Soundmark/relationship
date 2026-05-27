@@ -12,6 +12,7 @@ import {
 import {
   ArrowLeftOutlined,
   CameraOutlined,
+  CalculatorOutlined,
   PlusOutlined,
   CloseOutlined,
   LinkOutlined,
@@ -20,6 +21,7 @@ import dayjs from "dayjs";
 import { db } from "@/db";
 import { usePersons } from "@/hooks/usePersons";
 import ImageCropper from "@/components/ImageCropper";
+import RelationshipCalculator from "@/components/RelationshipCalculator";
 import type { Person, Relationship } from "@/types";
 
 const { Title, Text } = Typography;
@@ -43,6 +45,11 @@ export default function EditPerson() {
   // Image cropper state
   const [cropperOpen, setCropperOpen] = useState(false);
   const [cropperImage, setCropperImage] = useState("");
+
+  // Relationship calculator state
+  const [calculatorOpen, setCalculatorOpen] = useState(false);
+  const [calculatorForNewRelation, setCalculatorForNewRelation] =
+    useState(false);
 
   // Relations management
   const [relations, setRelations] = useState<Relationship[]>([]);
@@ -334,16 +341,33 @@ export default function EditPerson() {
             >
               我称呼TA
             </Text>
-            <Input
-              placeholder="如：表哥、婶婶"
-              value={iCall}
-              onChange={(e) => setICall(e.target.value)}
-              variant="filled"
-              style={{
-                ...inputStyle,
-                backgroundColor: "#FFFBF7",
-              }}
-            />
+            <div className="flex gap-2">
+              <Input
+                placeholder="如：表哥、婶婶"
+                value={iCall}
+                onChange={(e) => setICall(e.target.value)}
+                variant="filled"
+                style={{
+                  ...inputStyle,
+                  flex: 1,
+                  backgroundColor: "#FFFBF7",
+                }}
+              />
+              <Button
+                icon={<CalculatorOutlined />}
+                onClick={() => {
+                  setCalculatorForNewRelation(false);
+                  setCalculatorOpen(true);
+                }}
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 12,
+                  borderColor: "#E8A87C",
+                  color: "#C17F59",
+                }}
+              />
+            </div>
           </div>
 
           {/* Relations Management */}
@@ -436,6 +460,15 @@ export default function EditPerson() {
                     value={newRelationLabel}
                     onChange={(e) => setNewRelationLabel(e.target.value)}
                     onPressEnter={handleAddRelation}
+                  />
+                  <Button
+                    type="text"
+                    icon={<CalculatorOutlined />}
+                    onClick={() => {
+                      setCalculatorForNewRelation(true);
+                      setCalculatorOpen(true);
+                    }}
+                    style={{ color: "#C17F59" }}
                   />
                 </div>
                 <Button
@@ -595,6 +628,19 @@ export default function EditPerson() {
         open={cropperOpen}
         onCancel={handleCropCancel}
         onConfirm={handleCropConfirm}
+      />
+
+      {/* Relationship Calculator */}
+      <RelationshipCalculator
+        open={calculatorOpen}
+        onClose={() => setCalculatorOpen(false)}
+        onSelect={(result) => {
+          if (calculatorForNewRelation) {
+            setNewRelationLabel(result);
+          } else {
+            setICall(result);
+          }
+        }}
       />
     </div>
   );
