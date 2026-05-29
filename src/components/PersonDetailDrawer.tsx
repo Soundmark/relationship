@@ -149,8 +149,7 @@ export function PersonDetailDrawer({
       closable={true}
       onClose={onClose}
       open={open}
-      height="auto"
-      maskClosable={true}
+      mask={{closable: true}}
       styles={{
         header: {
           borderBottom: "none",
@@ -160,7 +159,7 @@ export function PersonDetailDrawer({
           padding: "20px",
           paddingBottom: "32px",
         },
-        content: {
+        section: {
           borderRadius: "20px 20px 0 0",
           backgroundColor: "#FFFBF7",
         },

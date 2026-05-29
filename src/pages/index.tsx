@@ -10,7 +10,7 @@ import {
   Empty,
   Typography,
   Space,
-  message,
+  App,
 } from "antd";
 import {
   SettingOutlined,
@@ -32,6 +32,7 @@ const { Title, Text } = Typography;
 const { Search } = Input;
 
 export default function Home() {
+  const { message } = App.useApp();
   const [activeTab, setActiveTab] = useState<"list" | "graph">("list");
   const [searchVisible, setSearchVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");

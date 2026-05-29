@@ -6,8 +6,8 @@ import {
   Typography,
   Collapse,
   DatePicker,
-  message,
   Select,
+  App,
 } from "antd";
 import {
   ArrowLeftOutlined,
@@ -28,6 +28,7 @@ const { Title, Text } = Typography;
 const { TextArea } = Input;
 
 export default function EditPerson() {
+  const { message } = App.useApp();
   const router = useRouter();
   const { id } = router.query;
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -54,37 +55,6 @@ export default function EditPerson() {
   const [relatedPersons, setRelatedPersons] = useState<Map<string, Person>>(new Map());
   const [newRelationToId, setNewRelationToId] = useState<string>("");
   const [newRelationType, setNewRelationType] = useState<RelationshipType>("other");
-
-  // Load person data and relations
-  useEffect(() => {
-    if (!id || typeof id !== "string") return;
-
-    const loadData = async () => {
-      try {
-        const person = await db.persons.get(id);
-        if (!person) {
-          message.error("找不到该亲友");
-          router.replace("/");
-          return;
-        }
-        setName(person.name);
-        setICall(person.iCall || "");
-        setPhone(person.phone || "");
-        setBirthday(person.birthday || "");
-        setNotes(person.notes || "");
-        setPhoto(person.photo || "");
-
-        // Load relations
-        await loadRelations(id);
-      } catch {
-        message.error("加载数据失败");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadData();
-  }, [id, router]);
 
   const loadRelations = async (personId: string) => {
     try {
@@ -115,6 +85,38 @@ export default function EditPerson() {
       // Error handling
     }
   };
+
+  // Load person data and relations
+  useEffect(() => {
+    if (!id || typeof id !== "string") return;
+
+    const loadData = async () => {
+      try {
+        const person = await db.persons.get(id);
+        if (!person) {
+          message.error("找不到该亲友");
+          router.replace("/");
+          return;
+        }
+        setName(person.name);
+        setICall(person.iCall || "");
+        setPhone(person.phone || "");
+        setBirthday(person.birthday || "");
+        setNotes(person.notes || "");
+        setPhoto(person.photo || "");
+
+        // Load relations
+        await loadRelations(id);
+      } catch {
+        message.error("加载数据失败");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, router]);
 
   const handleAddRelation = async () => {
     if (!id || typeof id !== "string") return;

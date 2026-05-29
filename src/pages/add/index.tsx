@@ -6,18 +6,16 @@ import {
   Typography,
   Collapse,
   DatePicker,
-  message,
   Select,
+  App,
 } from "antd";
 import {
   ArrowLeftOutlined,
   CameraOutlined,
   CalculatorOutlined,
-  LinkOutlined,
   PlusOutlined,
   CloseOutlined,
 } from "@ant-design/icons";
-import dayjs from "dayjs";
 import { db } from "@/db";
 import { usePersons } from "@/hooks/usePersons";
 import ImageCropper from "@/components/ImageCropper";
@@ -34,6 +32,7 @@ interface RelationEntry {
 }
 
 export default function AddPerson() {
+  const { message } = App.useApp();
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { persons } = usePersons();
@@ -119,15 +118,8 @@ export default function AddPerson() {
       return;
     }
 
-    // 验证关系数据
+    // 验证关系数据：只保存有效的关系，跳过未选择人员的
     const validRelations = relations.filter((r) => r.toPersonId);
-    const invalidRelations = relations.filter(
-      (r) => !r.toPersonId
-    );
-    if (invalidRelations.length > 0) {
-      message.warning("请选择关联人员");
-      return;
-    }
 
     setSaving(true);
     try {

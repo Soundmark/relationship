@@ -14,7 +14,6 @@ import {
   Button,
   Card,
   Typography,
-  message,
   App,
 } from "antd";
 import {
@@ -39,9 +38,9 @@ interface ExportData {
 }
 
 export default function Settings() {
+  const { message, modal } = App.useApp();
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { modal } = App.useApp();
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isInstalled, setIsInstalled] = useState(false);
 
