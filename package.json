@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build --webpack",
+    "build": "next build && npx serwist build",
     "start": "next start",
     "lint": "eslint"
   },
@@ -24,6 +24,7 @@
     "serwist": "^9.5.11"
   },
   "devDependencies": {
+    "@serwist/cli": "^9.5.11",
     "@tailwindcss/postcss": "^4",
     "@types/d3": "^7.4.3",
     "@types/node": "^20",
