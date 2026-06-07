@@ -146,8 +146,8 @@ export default function AddPerson() {
         for (const relation of validRelations) {
           await db.relationships.add({
             id: crypto.randomUUID(),
-            fromPersonId: personId,
-            toPersonId: relation.toPersonId,
+            fromPersonId: relation.toPersonId,  // 亲长（已有人物）
+            toPersonId: personId,                // 子级（新添加的人）
             type: relation.type,
           });
         }
@@ -335,7 +335,7 @@ export default function AddPerson() {
                         handleRelationChange(index, "type", value)
                       }
                       options={[
-                        { value: "parent-child", label: "子女" },
+                        { value: "parent-child", label: "TA的子女" },
                         { value: "spouse", label: "夫妻" },
                         { value: "sibling", label: "兄弟姐妹" },
                         { value: "other", label: "其他" },

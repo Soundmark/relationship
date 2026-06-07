@@ -464,7 +464,7 @@ export default function EditPerson() {
                     value={newRelationType}
                     onChange={setNewRelationType}
                     options={[
-                      { value: "parent-child", label: "子女" },
+                      { value: "parent-child", label: "TA是我的子女" },
                       { value: "spouse", label: "夫妻" },
                       { value: "sibling", label: "兄弟姐妹" },
                       { value: "other", label: "其他" },

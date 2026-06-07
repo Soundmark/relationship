@@ -94,14 +94,32 @@ export function useRelationshipGraph() {
           label: typeLabelMap[rel.type] || "其他",
         });
 
-        // 如果是亲子关系：子级连接我，亲长通过子级连接 → 删除我→亲长的直连边
+        // 如果是亲子关系：保留 me→子级 的直连边（子级在 ring1），
+        // 移除 me→长辈 的直连边（长辈通过子级关系边到达，在 ring2）
+        // 目标布局链：我 → 子级(ring1) → 长辈(ring2)
         if (rel.type === "parent-child") {
-          const meToParentIndex = graphLinks.findIndex(
-            (l) => l.source === "me" && l.target === rel.fromPersonId
+          const PARENT_KEYWORDS = [
+            "父", "母", "爸", "妈", "爹", "娘",
+            "爷", "奶", "公", "婆", "岳",
+            "祖父", "祖母", "外公", "外婆",
+            "老公", "老婆", "丈夫", "妻子",
+          ];
+          const personA = graphNodes.find((n) => n.id === rel.fromPersonId);
+          const personB = graphNodes.find((n) => n.id === rel.toPersonId);
+          const aIsParent = PARENT_KEYWORDS.some((k) => personA?.iCall?.includes(k));
+          const bIsParent = PARENT_KEYWORDS.some((k) => personB?.iCall?.includes(k));
+
+          let parentId: string | null = null;
+          if (aIsParent && !bIsParent) parentId = rel.fromPersonId;
+          else if (bIsParent && !aIsParent) parentId = rel.toPersonId;
+          // iCall 无法判断时，回退到数据方向（from = 亲长）
+          else parentId = rel.fromPersonId;
+
+          // 移除 me→亲长
+          const idx = graphLinks.findIndex(
+            (l) => l.source === "me" && l.target === parentId,
           );
-          if (meToParentIndex !== -1) {
-            graphLinks.splice(meToParentIndex, 1);
-          }
+          if (idx !== -1) graphLinks.splice(idx, 1);
         }
       });
 

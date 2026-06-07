@@ -1,10 +1,3 @@
-# OpenWolf
-
-@.wolf/OPENWOLF.md
-
-This project uses OpenWolf for context management. Read and follow .wolf/OPENWOLF.md every session. Check .wolf/cerebrum.md before generating code. Check .wolf/anatomy.md before reading files.
-
-
 # CLAUDE.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
@@ -72,15 +65,16 @@ Ant Design theme is configured in components using `ConfigProvider` with these t
 ## Data Models
 
 ### Person
+
 ```typescript
 interface Person {
   id: string;
   name: string;
-  photo?: string;      // Base64 encoded
-  callMe?: string;     // How they call me (e.g., "侄子")
-  iCall?: string;      // How I call them (e.g., "叔叔")
+  photo?: string; // Base64 encoded
+  callMe?: string; // How they call me (e.g., "侄子")
+  iCall?: string; // How I call them (e.g., "叔叔")
   phone?: string;
-  birthday?: string;   // YYYY-MM-DD
+  birthday?: string; // YYYY-MM-DD
   notes?: string;
   createdAt: number;
   updatedAt: number;
@@ -88,6 +82,7 @@ interface Person {
 ```
 
 ### Relationship
+
 ```typescript
 interface Relationship {
   id: string;
